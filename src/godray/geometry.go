@@ -24,7 +24,11 @@ type Sphere struct {
 	Radius float64
 }
 
-func (s *Sphere) Intersect(r *Ray) (*Point, float64) {
+func (s *Sphere) Normal(p *Point) *Vector {
+	return p.subtract(s.Center).normalize()
+}
+
+func (s *Sphere) Intersect(r *Ray) (*Point, float64, *Vector) {
 	l := r.V.normalize()
 	o := r.P
 
@@ -34,10 +38,11 @@ func (s *Sphere) Intersect(r *Ray) (*Point, float64) {
 	sqrtSum := (leftSide * leftSide) - diff.dot(diff) + s.Radius*s.Radius
 
 	if sqrtSum < 0 {
-		return nil, 0
+		return nil, 0, nil
 	} else if sqrtSum == 0.0 {
 		d := -1 * leftSide
-		return o.add(r.V.Scale(d)), d
+		intersectPoint := o.add(r.V.Scale(d))
+		return intersectPoint, d, s.Normal(intersectPoint)
 	} else {
 		d1 := -1*leftSide + math.Sqrt(sqrtSum)
 		d2 := -1*leftSide - math.Sqrt(sqrtSum)
@@ -46,9 +51,9 @@ func (s *Sphere) Intersect(r *Ray) (*Point, float64) {
 		pt2 := o.add(r.V.normalize().Scale(d2))
 
 		if r.P.subtract(pt1).magnitude()-r.P.subtract(pt2).magnitude() >= 0 {
-			return pt2, d2
+			return pt2, d2, s.Normal(pt2)
 		} else {
-			return pt1, d1
+			return pt1, d1, s.Normal(pt1)
 		}
 	}
 }
