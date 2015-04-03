@@ -3,17 +3,17 @@ package godray
 import "math"
 
 type camera struct {
-	position *Point
+	Position *Point
 	View     *Vector
-	up       *Vector
+	Up       *Vector
 }
 
 func NewCamera(position *Point, view *Vector, up *Vector) *camera {
-	return &camera{position, view.normalize(), up.normalize()}
+	return &camera{position, view.Normalize(), up.Normalize()}
 }
 
 func (c *camera) side() *Vector {
-	return c.View.cross(c.up)
+	return c.View.Cross(c.Up)
 }
 
 func (c *camera) GetRayTo(screen *Screen, u int, v int) *Ray {
@@ -22,11 +22,11 @@ func (c *camera) GetRayTo(screen *Screen, u int, v int) *Ray {
 
 	d := (h / 2) / math.Tan(fovy/2)
 	sideVector := c.side().Scale(float64(u) - w/2)
-	upVector := c.up.Scale(float64(v) - h/2)
+	upVector := c.Up.Scale(float64(v) - h/2)
 	viewVector := c.View.Scale(d)
 
 	return &Ray{
-		c.position,
-		sideVector.add(upVector).add(viewVector).normalize(),
+		c.Position,
+		sideVector.Add(upVector).Add(viewVector).Normalize(),
 	}
 }

@@ -21,9 +21,26 @@ var o *Point = &Point{0, 0, 0}
 func main() {
 	eye := o
 	camera := NewCamera(eye, k.Scale(-1), j)
-	//fmt.Println(camera.View)
-	sphere := &Sphere{&Point{0, 0, -4}, 1}
 	screen := &Screen{800, 600, 45}
+
+	// colors
+	Red := color.RGBA{255, 0, 0, 255}
+
+	// objects
+	sphereMaterial := &Material{
+		Red,
+		color.White,
+		2,
+	}
+	sphere := NewSphere(&Point{0, 0, -4}, 1, sphereMaterial)
+
+	// lights
+	light := &Light{
+		&Point{4, 0, -2},
+		color.White,
+		color.White,
+		color.White,
+	}
 
 	//hit := &Ray{&Point{0, 0, 0}, &Vector{-0.01, 0.01, -1}}
 	//miss := &Ray{&Point{0, 5, 0}, &Vector{0, 0, -4}}
@@ -41,9 +58,6 @@ func main() {
 	img := image.NewRGBA(imgRect)
 	draw.Draw(img, img.Bounds(), &image.Uniform{color.Black}, image.ZP, draw.Src)
 
-	//minDepth := 3.0
-	//maxDepth := 4.0
-
 	//runtime.GOMAXPROCS(1)
 	wg := sync.WaitGroup{}
 
@@ -51,23 +65,23 @@ func main() {
 		for v := 0; v < screen.Height; v++ {
 			wg.Add(1)
 			go func(u, v int) {
-				//fmt.Println(u, v)
-				//time.Sleep(5000 * time.Millisecond)
 				ray := camera.GetRayTo(screen, u, v)
-				//fmt.Printf("%q\n", ray)
-				intersection, _, normal := sphere.Intersect(ray)
-				//fmt.Printf("%q\n", intersection)
+				intersection, _, n := sphere.Intersect(ray)
 
 				if intersection != nil {
-					//depth := uint8((t - minDepth) / (maxDepth - minDepth) * 255)
-					color := color.RGBA{
-						uint8((normal.X + 1) / 2 * 255),
-						uint8((normal.Y + 1) / 2 * 255),
-						uint8((normal.Z + 1) / 2 * 255),
-						255,
-					}
-					//fmt.Println(depth, color)
-					fill := &image.Uniform{color}
+					l := light.Position.Subtract(intersection)
+					r := n.Scale(2 * l.Dot(n)).Subtract(l)
+					vv := ray.V.Normalize().Scale(-1)
+
+					// normal map
+					//color := color.RGBA{
+					//uint8((normal.X + 1) / 2 * 255),
+					//uint8((normal.Y + 1) / 2 * 255),
+					//uint8((normal.Z + 1) / 2 * 255),
+					//255,
+					//}
+					//fill := &image.Uniform{color}
+
 					draw.Draw(img, image.Rect(u, v, u+1, v+1), fill, image.ZP, draw.Src)
 				}
 				wg.Done()
