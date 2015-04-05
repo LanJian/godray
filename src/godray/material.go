@@ -1,9 +1,8 @@
 package godray
 
-import "image/color"
-
 type Material struct {
-	Diffuse   color.Color
-	Specular  color.Color
+	Ambient   *Color
+	Diffuse   *Color
+	Specular  *Color
 	Shininess float64
 }

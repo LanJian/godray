@@ -1,6 +1,7 @@
 package godray
 
 import (
+	// "fmt"
 	"image/color"
 	"math"
 )
@@ -65,36 +66,57 @@ type ColorAlgebra interface {
 }
 
 type Color struct {
-	color.Color
+	color.RGBA
 }
 
-func multiply(int1, int2 uint32) uint8 {
-	return uint8(float64(int1) * float64(int2) / 255)
+func multiply(a, b float64) uint8 {
+	//fmt.Println("x ", a, b, a*b/255, clamp(0, 255, a*b/255))
+	return clamp(0, 255, a*b/255)
 }
 
-func (c1 Color) Multiply(c2 color.Color) color.Color {
-	multiply := func(int1, int2 uint32) uint8 {
-		return uint8(float64(int1) * float64(int2) / 255)
+func clamp(min, max, num float64) uint8 {
+	return uint8(math.Min(math.Max(num, min), max))
+}
+
+func (c1 Color) Multiply(c2 *Color) *Color {
+	r1, g1, b1 := c1.R, c1.G, c1.B
+	r2, g2, b2 := c2.R, c2.G, c2.B
+
+	return &Color{
+		color.RGBA{
+			multiply(float64(r1), float64(r2)),
+			multiply(float64(g1), float64(g2)),
+			multiply(float64(b1), float64(b2)),
+			//multiply(float64(a1), float64(a2)),
+			255,
+		},
 	}
+}
 
-	r1, g1, b1, a1 := c1.RGBA()
-	r2, g2, b2, a2 := c2.RGBA()
+func (c1 Color) Add(c2 *Color) *Color {
+	r1, g1, b1 := c1.R, c1.G, c1.B
+	r2, g2, b2 := c2.R, c2.G, c2.B
 
-	return color.RGBA{
-		multiply(r1, r2),
-		multiply(g1, g2),
-		multiply(b1, b2),
-		multiply(a1, a2),
+	return &Color{
+		color.RGBA{
+			clamp(0, 255, float64(r1)+float64(r2)),
+			clamp(0, 255, float64(g1)+float64(g2)),
+			clamp(0, 255, float64(b1)+float64(b2)),
+			//uint8(a1 + a2),
+			255,
+		},
 	}
 }
 
-func (c1 Color) Scale(scalar uint32) color.Color {
-	r1, g1, b1, a1 := c1.RGBA()
+func (c1 Color) Scale(scalar float64) *Color {
+	r1, g1, b1 := c1.R, c1.G, c1.G
 
-	return color.RGBA{
-		multiply(r1, scalar),
-		multiply(g1, scalar),
-		multiply(b1, scalar),
-		multiply(a1, scalar),
+	return &Color{
+		color.RGBA{
+			clamp(0, 255, float64(r1)*scalar),
+			clamp(0, 255, float64(g1)*scalar),
+			clamp(0, 255, float64(b1)*scalar),
+			255,
+		},
 	}
 }
