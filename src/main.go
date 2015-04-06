@@ -105,6 +105,7 @@ func main() {
 
 	for u := 0; u < screen.Width; u++ {
 		for v := 0; v < screen.Height; v++ {
+			wg.Add(1)
 			go func(u, v int) {
 				ray := camera.GetRayTo(screen, u, v)
 
