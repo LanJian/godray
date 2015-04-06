@@ -105,16 +105,8 @@ func main() {
 
 	for u := 0; u < screen.Width; u++ {
 		for v := 0; v < screen.Height; v++ {
-			wg.Add(1)
-
 			go func(u, v int) {
 				ray := camera.GetRayTo(screen, u, v)
-				intersections := make([]*Intersection, len(objects))
-
-				for i, object := range objects {
-					point, dist, n := object.Intersect(ray)
-					intersections[i] = &Intersection{point, dist, n}
-				}
 
 				closestIntersection, closestObject := getClosestIntersection(ray,
 					objects)
