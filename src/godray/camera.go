@@ -22,7 +22,7 @@ func (c *camera) GetRayTo(screen *Screen, u int, v int) *Ray {
 
 	d := (h / 2) / math.Tan(fovy/2)
 	sideVector := c.side().Scale(float64(u) - w/2)
-	upVector := c.Up.Scale(float64(v) - h/2)
+	upVector := c.Up.Scale(h/2 - float64(v))
 	viewVector := c.View.Scale(d)
 
 	return &Ray{
