@@ -47,7 +47,7 @@ func main() {
 
 	// colors
 	red := &Color{color.RGBA{255, 0, 0, 255}}
-	//green := &Color{color.RGBA{0, 0, 255, 255}}
+	green := &Color{color.RGBA{0, 255, 0, 255}}
 	blue := &Color{color.RGBA{0, 0, 255, 255}}
 	white := &Color{color.RGBA{255, 255, 255, 255}}
 	black := &Color{color.RGBA{0, 0, 0, 255}}
@@ -61,7 +61,7 @@ func main() {
 			white,
 		},
 		&Light{
-			&Point{-4, 0, -2},
+			&Point{10, 4, 2},
 			white.Scale(0.1),
 			white,
 			white,
@@ -70,18 +70,23 @@ func main() {
 
 	// objects
 	objects := []Object{
-		NewSphere(&Point{0, -4.5, -4}, 3, &Material{
-			blue,
-			blue,
-			white,
-			10,
-		}),
-
 		NewSphere(&Point{0, 0, -4}, 1, &Material{
 			red,
 			red,
 			white,
-			10,
+			20,
+		}),
+		NewSphere(&Point{-2, 2, -4}, 1, &Material{
+			green,
+			green,
+			white,
+			20,
+		}),
+		NewSphere(&Point{2, -4.5, -4}, 3, &Material{
+			blue,
+			blue,
+			white,
+			20,
 		}),
 	}
 
