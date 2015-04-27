@@ -40,52 +40,101 @@ func getClosestIntersection(ray *Ray,
 	return closestIntersection, closestObject
 }
 
+func raytrace(wg *sync.WaitGroup, u, v int, ray *Ray, lights [2]*Light, objects []Object, img *image.RGBA) {
+	closestIntersection, closestObject := getClosestIntersection(ray, objects)
+	intersection := closestIntersection.Point
+	n := closestIntersection.Normal
+
+	if intersection != nil {
+		var illumination *Color = Black
+
+		for _, light := range lights {
+			illumination = illumination.Add(closestObject.Material().Ambient.
+				Multiply(light.Ambient))
+
+			l := light.Position.Subtract(intersection).Normalize()
+
+			rayToLight := &Ray{
+				intersection,
+				l,
+			}
+
+			obstruction, _ := getClosestIntersection(rayToLight, objects)
+			if obstruction.Point != nil {
+				continue
+			}
+
+			r := n.Scale(2 * l.Dot(n)).Subtract(l)
+			vv := ray.V.Normalize().Scale(-1)
+
+			diffuseTerm := light.Diffuse.Scale(l.Dot(n)).
+				Multiply(closestObject.Material().Diffuse)
+			specularTerm := light.Specular.
+				Scale(math.Pow(r.Dot(vv), closestObject.Material().Shininess)).
+				Multiply(closestObject.Material().Specular)
+
+			if l.Dot(n) > 0 {
+				illumination = illumination.Add(diffuseTerm)
+			}
+
+			if r.Dot(vv) > 0 {
+				illumination = illumination.Add(specularTerm)
+			}
+
+		}
+
+		fill := &image.Uniform{color.RGBA{
+			illumination.R,
+			illumination.G,
+			illumination.B,
+			illumination.A,
+		}}
+
+		draw.Draw(img, image.Rect(u, v, u+1, v+1), fill, image.ZP, draw.Src)
+	}
+
+	wg.Done()
+}
+
 func main() {
 	eye := o
 	camera := NewCamera(eye.Add(k.Scale(10)), k.Scale(-1), j)
 	screen := &Screen{800, 600, 45}
 
-	// colors
-	red := &Color{color.RGBA{255, 0, 0, 255}}
-	green := &Color{color.RGBA{0, 255, 0, 255}}
-	blue := &Color{color.RGBA{0, 0, 255, 255}}
-	white := &Color{color.RGBA{255, 255, 255, 255}}
-	black := &Color{color.RGBA{0, 0, 0, 255}}
-
 	// lights
 	lights := [...]*Light{
 		&Light{
 			&Point{0, 4, -4},
-			white.Scale(0.1),
-			white,
-			white,
+			White.Scale(0.1),
+			White,
+			White,
 		},
 		&Light{
 			&Point{10, 4, 2},
-			white.Scale(0.1),
-			white,
-			white,
+			White.Scale(0.1),
+			White,
+			White,
 		},
 	}
 
 	// objects
 	objects := []Object{
 		NewSphere(&Point{0, 0, -4}, 1, &Material{
-			red,
-			red,
-			white,
+			Red,
+			Red,
+			White,
 			20,
 		}),
 		NewSphere(&Point{-2, 2, -4}, 1, &Material{
-			green,
-			green,
-			white,
+			Green,
+			Green,
+			White,
 			20,
 		}),
 		NewSphere(&Point{2, -4.5, -4}, 3, &Material{
-			blue,
-			blue,
-			white,
+			Blue,
+			Blue,
+			White,
 			20,
 		}),
 	}
@@ -111,63 +160,8 @@ func main() {
 	for u := 0; u < screen.Width; u++ {
 		for v := 0; v < screen.Height; v++ {
 			wg.Add(1)
-			go func(u, v int) {
-				ray := camera.GetRayTo(screen, u, v)
-
-				closestIntersection, closestObject := getClosestIntersection(ray,
-					objects)
-				intersection := closestIntersection.Point
-				n := closestIntersection.Normal
-
-				if intersection != nil {
-					var illumination *Color = black
-
-					for _, light := range lights {
-						illumination = illumination.Add(closestObject.Material().Ambient.
-							Multiply(light.Ambient))
-
-						l := light.Position.Subtract(intersection).Normalize()
-
-						rayToLight := &Ray{
-							intersection,
-							l,
-						}
-
-						obstruction, _ := getClosestIntersection(rayToLight, objects)
-						if obstruction.Point != nil {
-							continue
-						}
-
-						r := n.Scale(2 * l.Dot(n)).Subtract(l)
-						vv := ray.V.Normalize().Scale(-1)
-
-						diffuseTerm := light.Diffuse.Scale(l.Dot(n)).
-							Multiply(closestObject.Material().Diffuse)
-						specularTerm := light.Specular.
-							Scale(math.Pow(r.Dot(vv), closestObject.Material().Shininess)).
-							Multiply(closestObject.Material().Specular)
-
-						if l.Dot(n) > 0 {
-							illumination = illumination.Add(diffuseTerm)
-						}
-
-						if r.Dot(vv) > 0 {
-							illumination = illumination.Add(specularTerm)
-						}
-
-					}
-
-					fill := &image.Uniform{color.RGBA{
-						illumination.R,
-						illumination.G,
-						illumination.B,
-						illumination.A,
-					}}
-
-					draw.Draw(img, image.Rect(u, v, u+1, v+1), fill, image.ZP, draw.Src)
-				}
-				wg.Done()
-			}(u, v)
+			ray := camera.GetRayTo(screen, u, v)
+			go raytrace(&wg, u, v, ray, lights, objects, img)
 		}
 	}
 
@@ -178,5 +172,4 @@ func main() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-
 }
