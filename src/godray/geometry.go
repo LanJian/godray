@@ -25,6 +25,7 @@ type Intersection struct {
 	Normal   *Vector
 }
 
+// Sphere methods
 func NewSphere(center *Point, radius float64, material *Material) Sphere {
 	return Sphere{center, radius, material}
 }

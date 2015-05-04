@@ -10,13 +10,15 @@ import (
 	"image/png"
 	"math"
 	"os"
-	"sync"
+	//"sync"
 )
 
 var i *Vector = &Vector{1, 0, 0}
 var j *Vector = &Vector{0, 1, 0}
 var k *Vector = &Vector{0, 0, 1}
 var o *Point = &Point{0, 0, 0}
+
+const MAX_DEPTH int = 10
 
 func getClosestIntersection(ray *Ray,
 	objects []Object) (*Intersection, Object) {
@@ -40,16 +42,23 @@ func getClosestIntersection(ray *Ray,
 	return closestIntersection, closestObject
 }
 
-func raytrace(wg *sync.WaitGroup, u, v int, ray *Ray, lights [2]*Light, objects []Object, img *image.RGBA) {
+func raytrace(ray *Ray, lights []*Light, objects []Object, depth int) *Color {
+	var ambientTerm *Color = Black
+	var diffuseTerm *Color = Black
+	var specularTerm *Color = Black
+
+	if depth <= 0 {
+		return nil
+	}
+
 	closestIntersection, closestObject := getClosestIntersection(ray, objects)
 	intersection := closestIntersection.Point
 	n := closestIntersection.Normal
 
+	vv := ray.V.Normalize().Scale(-1)
 	if intersection != nil {
-		var illumination *Color = Black
-
 		for _, light := range lights {
-			illumination = illumination.Add(closestObject.Material().Ambient.
+			ambientTerm = ambientTerm.Add(closestObject.Material().Ambient.
 				Multiply(light.Ambient))
 
 			l := light.Position.Subtract(intersection).Normalize()
@@ -65,35 +74,42 @@ func raytrace(wg *sync.WaitGroup, u, v int, ray *Ray, lights [2]*Light, objects 
 			}
 
 			r := n.Scale(2 * l.Dot(n)).Subtract(l)
-			vv := ray.V.Normalize().Scale(-1)
-
-			diffuseTerm := light.Diffuse.Scale(l.Dot(n)).
-				Multiply(closestObject.Material().Diffuse)
-			specularTerm := light.Specular.
-				Scale(math.Pow(r.Dot(vv), closestObject.Material().Shininess)).
-				Multiply(closestObject.Material().Specular)
 
 			if l.Dot(n) > 0 {
-				illumination = illumination.Add(diffuseTerm)
+				diffuseTerm = diffuseTerm.Add(light.Diffuse.Scale(l.Dot(n)).
+					Multiply(closestObject.Material().Diffuse))
 			}
 
 			if r.Dot(vv) > 0 {
-				illumination = illumination.Add(specularTerm)
+				specularTerm = specularTerm.Add(light.Specular.
+					Scale(math.Pow(r.Dot(vv), closestObject.Material().Shininess)).
+					Multiply(closestObject.Material().Specular))
 			}
-
 		}
 
-		fill := &image.Uniform{color.RGBA{
-			illumination.R,
-			illumination.G,
-			illumination.B,
-			illumination.A,
-		}}
+		// recurse
+		newRay := &Ray{intersection, n.Scale(vv.Dot(n)).Scale(2).Subtract(vv).Normalize()}
+		reflectedColor := raytrace(newRay, lights, objects, depth-1)
 
-		draw.Draw(img, image.Rect(u, v, u+1, v+1), fill, image.ZP, draw.Src)
+		if reflectedColor != nil {
+			if newRay.V.Dot(n) > 0 {
+				diffuseTerm = diffuseTerm.Add(reflectedColor.Scale(newRay.V.Dot(n)).
+					Multiply(closestObject.Material().Diffuse).Scale(closestObject.Material().Reflectivity))
+			}
+
+			if newRay.V.Dot(vv) > 0 {
+				specularTerm = specularTerm.Add(reflectedColor.
+					Scale(math.Pow(newRay.V.Dot(vv), closestObject.Material().Shininess)).
+					Multiply(closestObject.Material().Specular).Scale(closestObject.Material().Reflectivity))
+			}
+		}
+
+		return ambientTerm.Add(diffuseTerm).Add(specularTerm)
 	}
 
-	wg.Done()
+	return nil
+
+	//wg.Done()
 }
 
 func main() {
@@ -102,13 +118,13 @@ func main() {
 	screen := &Screen{800, 600, 45}
 
 	// lights
-	lights := [...]*Light{
-		&Light{
-			&Point{0, 4, -4},
-			White.Scale(0.1),
-			White,
-			White,
-		},
+	lights := []*Light{
+		//&Light{
+		//&Point{0, 10, 0},
+		//White.Scale(0.1),
+		//White,
+		//White,
+		//},
 		&Light{
 			&Point{10, 4, 2},
 			White.Scale(0.1),
@@ -119,27 +135,36 @@ func main() {
 
 	// objects
 	objects := []Object{
-		NewSphere(&Point{0, 0, -4}, 1, &Material{
-			Red,
-			Red,
+		NewSphere(&Point{5, 0, -2}, 2, &Material{
+			&Color{color.RGBA{250, 60, 60, 255}},
+			&Color{color.RGBA{250, 60, 60, 255}},
 			White,
 			20,
+			0.4,
 		}),
-		NewSphere(&Point{-2, 2, -4}, 1, &Material{
-			Green,
-			Green,
+		NewSphere(&Point{-2, 2, -4}, 3, &Material{
+			&Color{color.RGBA{60, 250, 60, 255}},
+			&Color{color.RGBA{60, 250, 60, 255}},
 			White,
-			20,
+			50,
+			0.9,
 		}),
-		NewSphere(&Point{2, -4.5, -4}, 3, &Material{
+		NewSphere(&Point{0, -10, -4}, 8, &Material{
 			Blue,
-			Blue,
+			&Color{color.RGBA{100, 100, 200, 255}},
 			White,
-			20,
+			50,
+			0.9,
+		}),
+		NewSphere(&Point{0, 4, 0}, 1, &Material{
+			&Color{color.RGBA{250, 225, 150, 255}},
+			&Color{color.RGBA{250, 225, 150, 255}},
+			White,
+			30,
+			0.6,
 		}),
 	}
 
-	//hit := &Ray{&Point{0, 0, 0}, &Vector{-0.01, 0.01, -1}}
 	//miss := &Ray{&Point{0, 5, 0}, &Vector{0, 0, -4}}
 	//_, _, n := sphere.Intersect(hit)
 	//intersection, t := sphere.Intersect(miss)
@@ -155,17 +180,31 @@ func main() {
 	draw.Draw(img, img.Bounds(), &image.Uniform{color.Black}, image.ZP, draw.Src)
 
 	//runtime.GOMAXPROCS(1)
-	wg := sync.WaitGroup{}
+	//wg := sync.WaitGroup{}
 
 	for u := 0; u < screen.Width; u++ {
 		for v := 0; v < screen.Height; v++ {
-			wg.Add(1)
+
+			//wg.Add(1)
 			ray := camera.GetRayTo(screen, u, v)
-			go raytrace(&wg, u, v, ray, lights, objects, img)
+			//fmt.Println(ray.P, ray.V)
+			illumination := raytrace(ray, lights, objects, MAX_DEPTH)
+			if illumination == nil {
+				illumination = Black
+			}
+
+			fill := &image.Uniform{color.RGBA{
+				illumination.R,
+				illumination.G,
+				illumination.B,
+				illumination.A,
+			}}
+
+			draw.Draw(img, image.Rect(u, v, u+1, v+1), fill, image.ZP, draw.Src)
 		}
 	}
 
-	wg.Wait()
+	//wg.Wait()
 
 	err = png.Encode(out, img)
 	if err != nil {
