@@ -1,6 +1,6 @@
 # godray
 
-Sample
+Multiple lights + shadows
 ![](https://github.com/LanJian/godray/raw/master/sample/output.png)
 
 Reflections
