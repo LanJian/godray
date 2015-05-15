@@ -5,3 +5,13 @@ Multiple lights + shadows
 
 Reflections
 ![](https://github.com/LanJian/godray/raw/master/sample/reflections.png)
+
+List of Features
+* Sphere
+* Phong lighting model
+* Shadow
+* Reflection
+
+To run without compilation
+    
+    go run src/main.go

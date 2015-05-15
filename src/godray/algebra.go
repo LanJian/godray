@@ -1,9 +1,6 @@
 package godray
 
-import (
-	// "fmt"
-	"math"
-)
+import "math"
 
 type Vector struct {
 	X, Y, Z float64
