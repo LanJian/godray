@@ -10,7 +10,6 @@ import (
 	"image/png"
 	"math"
 	"os"
-	//"sync"
 )
 
 var i *Vector = &Vector{1, 0, 0}
@@ -20,8 +19,7 @@ var o *Point = &Point{0, 0, 0}
 
 const MAX_DEPTH int = 10
 
-func getClosestIntersection(ray *Ray,
-	objects []Object) (*Intersection, Object) {
+func getClosestIntersection(ray *Ray, objects []Object) (*Intersection, Object) {
 	intersections := make([]*Intersection, len(objects))
 
 	for i, object := range objects {
@@ -56,6 +54,9 @@ func raytrace(ray *Ray, lights []*Light, objects []Object, depth int) *Color {
 	n := closestIntersection.Normal
 
 	vv := ray.V.Normalize().Scale(-1)
+
+	// Phong equaion calculation
+	// for details, please refer to https://en.wikipedia.org/wiki/Phong_reflection_model
 	if intersection != nil {
 		for _, light := range lights {
 			ambientTerm = ambientTerm.Add(closestObject.Material().Ambient.
@@ -69,6 +70,7 @@ func raytrace(ray *Ray, lights []*Light, objects []Object, depth int) *Color {
 			}
 
 			obstruction, _ := getClosestIntersection(rayToLight, objects)
+			// shadow calculation - if obstructed, we skip coloring.
 			if obstruction.Point != nil {
 				continue
 			}
@@ -89,6 +91,7 @@ func raytrace(ray *Ray, lights []*Light, objects []Object, depth int) *Color {
 
 		// recurse
 		newRay := &Ray{intersection, n.Scale(vv.Dot(n)).Scale(2).Subtract(vv).Normalize()}
+		// reflection calculation - treating the reflected color as a light source
 		reflectedColor := raytrace(newRay, lights, objects, depth-1)
 
 		if reflectedColor != nil {
@@ -108,23 +111,15 @@ func raytrace(ray *Ray, lights []*Light, objects []Object, depth int) *Color {
 	}
 
 	return nil
-
-	//wg.Done()
 }
 
 func main() {
 	eye := o
 	camera := NewCamera(eye.Add(k.Scale(10)), k.Scale(-1), j)
-	screen := &Screen{800, 600, 45}
+	screen := &Screen{Width: 800, Height: 600, Fov: 45}
 
 	// lights
 	lights := []*Light{
-		//&Light{
-		//&Point{0, 10, 0},
-		//White.Scale(0.1),
-		//White,
-		//White,
-		//},
 		&Light{
 			&Point{10, 4, 2},
 			White.Scale(0.1),
@@ -165,10 +160,11 @@ func main() {
 		}),
 	}
 
-	//miss := &Ray{&Point{0, 5, 0}, &Vector{0, 0, -4}}
-	//_, _, n := sphere.Intersect(hit)
-	//intersection, t := sphere.Intersect(miss)
-	//fmt.Println(n)
+	// Uncomment these to test the rays and intersection.
+	// miss := &Ray{&Point{0, 5, 0}, &Vector{0, 0, -4}}
+	// _, _, n := sphere.Intersect(hit)
+	// intersection, t := sphere.Intersect(miss)
+	// fmt.Println(n)
 
 	out, err := os.Create("./output.png")
 	if err != nil {
@@ -179,15 +175,9 @@ func main() {
 	img := image.NewRGBA(imgRect)
 	draw.Draw(img, img.Bounds(), &image.Uniform{color.Black}, image.ZP, draw.Src)
 
-	//runtime.GOMAXPROCS(1)
-	//wg := sync.WaitGroup{}
-
 	for u := 0; u < screen.Width; u++ {
 		for v := 0; v < screen.Height; v++ {
-
-			//wg.Add(1)
 			ray := camera.GetRayTo(screen, u, v)
-			//fmt.Println(ray.P, ray.V)
 			illumination := raytrace(ray, lights, objects, MAX_DEPTH)
 			if illumination == nil {
 				illumination = Black
@@ -203,8 +193,6 @@ func main() {
 			draw.Draw(img, image.Rect(u, v, u+1, v+1), fill, image.ZP, draw.Src)
 		}
 	}
-
-	//wg.Wait()
 
 	err = png.Encode(out, img)
 	if err != nil {

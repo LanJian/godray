@@ -5,7 +5,6 @@ import (
 	"math"
 )
 
-// colors
 var (
 	Red   = &Color{color.RGBA{255, 0, 0, 255}}
 	Green = &Color{color.RGBA{0, 255, 0, 255}}
@@ -24,7 +23,6 @@ type Color struct {
 }
 
 func multiply(a, b float64) uint8 {
-	//fmt.Println("x ", a, b, a*b/255, clamp(0, 255, a*b/255))
 	return clamp(0, 255, a*b/255)
 }
 
@@ -41,7 +39,6 @@ func (c1 Color) Multiply(c2 *Color) *Color {
 			multiply(float64(r1), float64(r2)),
 			multiply(float64(g1), float64(g2)),
 			multiply(float64(b1), float64(b2)),
-			//multiply(float64(a1), float64(a2)),
 			255,
 		},
 	}
@@ -56,7 +53,6 @@ func (c1 Color) Add(c2 *Color) *Color {
 			clamp(0, 255, float64(r1)+float64(r2)),
 			clamp(0, 255, float64(g1)+float64(g2)),
 			clamp(0, 255, float64(b1)+float64(b2)),
-			//uint8(a1 + a2),
 			255,
 		},
 	}
